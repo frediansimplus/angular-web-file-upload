@@ -37,11 +37,11 @@
 
                     @if (img.loading) {
                         <div class="overlay">
-                        <div class="spinner"></div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" [style.width.%]="img.progress"></div>
-                        </div>
-                        <p class="percent">{{ img.progress }}%</p>
+                            <!-- <div class="spinner"></div> -->
+                            <div class="progress-bar">
+                                <div class="progress-fill" [style.width.%]="img.progress"></div>
+                            </div>
+                            <p class="percent">{{ img.progress }}%</p>
                         </div>
                     }
 
@@ -94,7 +94,7 @@
 
             @if (vid.loading) {
                 <div class="overlay">
-                <div class="spinner"></div>
+                <!-- <div class="spinner"></div> -->
                 <div class="progress-bar">
                     <div class="progress-fill" [style.width.%]="vid.progress"></div>
                 </div>
