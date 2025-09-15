@@ -266,43 +266,77 @@ export class FileUpload implements OnDestroy {
   }
 
   // Upload all (just marking as saved in localStorage for now)
-  // --- Upload all (metadata in localStorage, chunks in IndexedDB only) ---
   async uploadAll(type: 'image' | 'video') {
     const items = type === 'image' ? this.images : this.videos;
     if (items.length === 0) return;
 
-    // Prepare metadata array for localStorage
-    const metadata = items.map(f => ({
-      id: f.id,
-      name: f.fileName,
-      size: f.size,
-      totalChunks: f.totalChunks,
-      uploadedAt: Date.now()
-    }));
+    try {
+      // Prepare metadata array for localStorage
+      const metadata = items.map(f => ({
+        id: f.id,
+        name: f.fileName,
+        size: f.size,
+        totalChunks: f.totalChunks,
+        uploadedAt: Date.now()
+      }));
 
-    // Save metadata only to localStorage
-    localStorage.setItem(this.storageKey(type), JSON.stringify(metadata));
+      // Save metadata only to localStorage
+      localStorage.setItem(this.storageKey(type), JSON.stringify(metadata));
 
-    // Ensure all chunks are already in IndexedDB
-    const db = await this.dbPromise;
-    for (const f of items) {
-      const store = db.transaction('chunks', 'readonly').objectStore('chunks');
-      const allChunks: FileChunk[] = await new Promise((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => {
-          const fileChunks = request.result.filter(c => c.fileId === f.id);
-          resolve(fileChunks);
-        };
-        request.onerror = () => reject(request.error);
+      // Verify all chunks are present in IndexedDB
+      const db = await this.dbPromise;
+      const verificationResults = await Promise.all(
+        items.map(async (f) => {
+          const store = db.transaction('chunks', 'readonly').objectStore('chunks');
+          const allChunks: FileChunk[] = await new Promise((resolve, reject) => {
+            const request = store.getAll();
+            request.onsuccess = () => {
+              const fileChunks = request.result.filter(c => c.fileId === f.id);
+              resolve(fileChunks);
+            };
+            request.onerror = () => reject(request.error);
+          });
+          return {
+            file: f,
+            chunksPresent: allChunks.length === (f.totalChunks || 0),
+            missingChunks: (f.totalChunks || 0) - allChunks.length
+          };
+        })
+      );
+
+      const filesWithMissingChunks = verificationResults.filter(r => !r.chunksPresent);
+      
+      if (filesWithMissingChunks.length > 0) {
+        const fileNames = filesWithMissingChunks.map(r => r.file.fileName).join(', ');
+        alert(`The following files are missing chunks: ${fileNames}. Upload aborted.`);
+        return;
+      }
+
+      // All chunks are present - proceed with cleanup
+      this.zone.run(() => {
+        // Revoke all object URLs
+        items.forEach(it => {
+          if (it.objectUrl) {
+            URL.revokeObjectURL(it.objectUrl);
+          }
+        });
+
+        // Clear the appropriate array
+        if (type === 'image') {
+          this.images = [];
+        } else {
+          this.videos = [];
+        }
+        
+        this.cdr.markForCheck(); // Update the UI
       });
 
-      // verify all chunks are present
-      if (allChunks.length !== (f.totalChunks || 0)) {
-        console.warn(`File ${f.fileName} is missing some chunks in IndexedDB!`);
-      }
-    }
+      alert(`${type === 'image' ? 'Images' : 'Videos'} uploaded successfully! ${items.length} files processed.`);
 
-    alert(`${type === 'image' ? 'Images' : 'Videos'} metadata saved to localStorage and chunks remain in IndexedDB!`);
+    } catch (error) {
+      console.error('Error during upload:', error);
+      alert('An error occurred during upload. Please try again.');
+    }
   }
 
   // Reset <input type="file">
