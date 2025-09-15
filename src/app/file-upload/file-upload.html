@@ -1,0 +1,119 @@
+<div class="upload-container">
+    <!-- Action buttons for images -->
+     <div>
+        
+     </div>
+    <div class="action-buttons">
+        <button mat-icon-button class="circle-btn upload" (click)="uploadAll('image')">
+            <mat-icon>cloud_upload</mat-icon>
+        </button>
+
+        <button mat-icon-button class="circle-btn remove" (click)="removeAll('image')">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+    <!-- Image Dropzone -->
+    <div class="drop-box"
+        (drop)="onFileDropped($event, 'image')"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event, 'image')"
+        [class.active]="isDragOver.image"
+        (click)="fileInputImage.click()">
+
+        <!-- Empty state -->
+        @if (images.length === 0) {
+        <div>
+            <h3>Upload Images</h3>
+            <p>Drag & Drop image files here or click to select</p>
+        </div>
+        }
+
+        <!-- Image Preview -->
+        @for (img of images; track img.id) {
+            <div class="preview-item">
+                <div class="media-wrap">
+                    <img [src]="img.url" alt="{{ img.fileName }}" (load)="onPreviewLoaded(img.id)" />
+
+                    <button mat-icon-button class="remove-btn" (click)="removePreview(img.id, $event)">
+                        <mat-icon>close</mat-icon>
+                    </button>
+
+                    @if (img.loading) {
+                        <div class="overlay">
+                        <div class="spinner"></div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" [style.width.%]="img.progress"></div>
+                        </div>
+                        <p class="percent">{{ img.progress }}%</p>
+                        </div>
+                    }
+
+                    <!-- file info overlay -->
+                    <div class="file-info">
+                        <span class="file-size">{{ formatFileSize(img.size) }}</span>
+                        <span class="file-name" title="{{ img.fileName }}">{{ img.fileName }}</span>
+                    </div>
+                </div>
+            </div>
+        }
+        <input #fileInputImage type="file" accept="image/*" hidden (change)="onFileSelected($event, 'image')" multiple>
+    </div>
+    
+    <!-- Action buttons for videos -->
+    <div class="action-buttons">
+        <button mat-icon-button class="circle-btn upload" (click)="uploadAll('video')">
+            <mat-icon>cloud_upload</mat-icon>
+        </button>
+
+        <button mat-icon-button class="circle-btn remove" (click)="removeAll('video')">
+            <mat-icon>close</mat-icon>
+        </button>
+    </div>
+    <!-- Video Dropzone -->
+    <div class="drop-box"
+        (drop)="onFileDropped($event, 'video')"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event, 'video')"
+        [class.active]="isDragOver.video"
+        (click)="fileInputVideo.click()">
+
+        <!-- Empty state -->
+        @if (videos.length === 0) {
+        <div>
+            <h3>Upload Videos</h3>
+            <p>Drag & Drop video files here or click to select</p>
+        </div>
+        }
+        
+        <!-- Video Preview -->
+        @for (vid of videos; track vid.id) {
+        <div class="preview-item">
+            <div class="media-wrap">
+            <video [src]="vid.url" controls (loadeddata)="onPreviewLoaded(vid.id)"></video>
+
+            <button mat-icon-button class="remove-btn" (click)="removePreview(vid.id, $event)">
+                        <mat-icon>close</mat-icon>
+                    </button>
+
+            @if (vid.loading) {
+                <div class="overlay">
+                <div class="spinner"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="vid.progress"></div>
+                </div>
+                <p class="percent">{{ vid.progress }}%</p>
+                </div>
+            }
+
+            <!-- file info overlay -->
+            <div class="file-info">
+                <span class="file-size">{{ formatFileSize(vid.size) }}</span>
+                <span class="file-name" title="{{ vid.fileName }}">{{ vid.fileName }}</span>
+            </div>
+            </div>
+        </div>
+        }
+
+        <input #fileInputVideo type="file" accept="video/*" hidden (change)="onFileSelected($event, 'video')" multiple>
+    </div>
+</div>
