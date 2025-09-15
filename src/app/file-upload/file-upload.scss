@@ -1,14 +1,55 @@
 .upload-container {
-    padding: 10px;
-    // display: flex;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  justify-content: flex-end;
+}
+
+.circle-btn {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease-in-out;
+  background-color: white;
+
+  mat-icon {
+    font-size: 22px;
+  }
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    transform: scale(1.1);
+  }
+}
+
+/* Warna khusus */
+.circle-btn.upload {
+  color: #4caf50; /* hijau */
+}
+.circle-btn.remove {
+  color: #f44336; /* merah */
+}
+
+/* Dropzone */
 .drop-box {
   flex: 1;
-  min-height: 220px;
-  border: 2px dashed #aaa;
-  border-radius: 8px;
-  padding: 1rem;
+  min-height: 240px;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  padding: 20px;
   text-align: center;
   position: relative;
   cursor: pointer;
@@ -16,13 +57,108 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
+  gap: 15px;
+  transition: all 0.3s ease;
+  background: #fafafa;
 }
 
 .drop-box.active {
   border-color: #2196f3;
-  background: rgba(33, 150, 243, 0.05);
+  background: rgba(33, 150, 243, 0.08);
 }
 
+/* Preview card */
+.preview-item {
+  position: relative;
+}
+
+.media-wrap {
+  position: relative;
+  display: inline-block;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+  }
+
+  img,
+  video {
+    width: 150px;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+/* Remove button */
+.remove-btn {
+  position: absolute;
+  border: 1px solid #f44336;
+  top: 6px;
+  right: 6px;
+  background: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 18px;
+    color: #f44336;    
+    position: relative;
+    top: 3px;
+    left: 1px;
+  }
+
+  &:hover {
+    background: #f44336;
+    mat-icon {
+      color: white;
+    }
+  }
+}
+
+/* File info */
+.file-info {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.file-size,
+.file-name {
+  background: rgba(255,255,255,0.9);
+  padding: 2px 6px;
+  border-radius: 5px;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-weight: 600;
+  color: #333;
+}
+.file-name {
+  font-size: 11px;
+  color: #555;
+}
+
+/* Overlay loading */
 .overlay {
   position: absolute;
   inset: 0;
@@ -32,142 +168,35 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+}
+
+.spinner {
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top: 3px solid #4caf50;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  animation: spin 1s linear infinite;
 }
 
 .progress-bar {
   width: 80%;
-  height: 5px;
+  height: 6px;
   background: rgba(255,255,255,0.3);
   border-radius: 3px;
-  margin-top: 5px;
   overflow: hidden;
 }
-
 .progress-fill {
   height: 100%;
   background: limegreen;
-  transition: width 0.2s ease;
+  transition: width 0.3s ease;
 }
-
-.preview-item {
-  position: relative;
-  display: inline-block;
-  margin: 8px;
-  text-align: center;
-}
-
-.preview-item img,
-.preview-item video {
-  width: 120px;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.media-wrap {
-  position: relative;
-  display: inline-block;
-}
-
-.media-wrap img,
-.media-wrap video {
-  max-width: 160px;
-  max-height: 120px;
-  border-radius: 8px;
-  display: block;
-}
-
-/* Remove button */
-.remove-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  cursor: pointer;
-  line-height: 20px;
-  .material-icons {
-    font-size: 16px;
-    position: relative;
-    top: 2px;
-    right: 6px;
-  }
-}
-
-.remove-btn:hover{
-    background:rgba(255, 0, 0, 0.6);
-}
-
-/* File info badge area */
-.file-info {
-  position: absolute;
-  bottom: 4px;
-  left: 4px;
-  right: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font-size: 11px;
-}
-
-/* Size label */
-.file-size {
-  background: rgba(255,255,255,0.85);
-  color: #000;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
+.percent {
   font-size: 12px;
+  font-weight: 500;
 }
 
-/* Filename with ellipsis */
-.file-name {
-  background: rgba(255,255,255,0.85);
-  color: #000;
-  padding: 2px 6px;
-  border-radius: 4px;
-  max-width: 90%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: default;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-
-.action-buttons {
-  display: flex;
-  gap: 10px;
-  margin: 5px;
-}
-
-.circle-btn {
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    // background-color: rgba(0, 0, 0, 0.05);
-    transform: scale(1.05);
-  }
-}
-
-/* Warna khusus */
-.circle-btn.upload {
-  color: #4caf50; /* hijau */
-}
-
-.circle-btn.remove {
-  color: #f44336; /* merah */
-}
-
-

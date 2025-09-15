@@ -1,4 +1,4 @@
-import { Component, NgZone, OnDestroy } from '@angular/core';
+import { Component, NgZone, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -6,7 +6,7 @@ interface PreviewFile {
   id: number;
   fileName: string;
   size: number;
-  url: string | null;       // object URL untuk preview
+  url: string | null;   // object URL for preview
   objectUrl?: string;
   loading: boolean;
   progress: number;
@@ -22,17 +22,22 @@ interface PreviewFile {
 export class FileUpload implements OnDestroy {
   images: PreviewFile[] = [];
   videos: PreviewFile[] = [];
+
+  @ViewChild('fileInputImage') fileInputImage!: ElementRef<HTMLInputElement>;
+  @ViewChild('fileInputVideo') fileInputVideo!: ElementRef<HTMLInputElement>;
+
   isDragOver = { image: false, video: false };
 
   private idCounter = 0;
-  private rafHandles = new Map<number, number>(); // simpan handle RAF untuk cancel
+  private rafHandles = new Map<number, number>(); // keep track of requestAnimationFrame handles
+
+  constructor(private zone: NgZone) {}
+
   private storageKey(type: 'image' | 'video') {
     return type === 'image' ? 'uploaded_images' : 'uploaded_videos';
   }
 
-  constructor(private zone: NgZone) {}
-
-  // --- Drag/drop handlers (tidak berubah) ---
+  // --- Drag/drop handlers ---
   onDragOver(event: DragEvent) {
     event.preventDefault();
   }
@@ -49,10 +54,33 @@ export class FileUpload implements OnDestroy {
 
   onFileSelected(event: Event, type: 'image' | 'video') {
     const input = event.target as HTMLInputElement;
-    if (input.files) this.handleFiles(input.files, type);
+    if (!input.files || input.files.length === 0) return;
+
+    const files = Array.from(input.files);
+
+    files.forEach(file => {
+      const objectUrl = URL.createObjectURL(file);
+      const item: PreviewFile = {
+        id: Date.now() + Math.random(),
+        fileName: file.name,
+        size: file.size,
+        url: objectUrl,
+        objectUrl,
+        progress: 0,
+        loading: false
+      };
+      if (type === 'image') {
+        this.images.push(item);
+      } else {
+        this.videos.push(item);
+      }
+    });
+
+    // Reset the file input so the same file can be selected again
+    input.value = '';
   }
 
-  // --- core: create objectURL + fake animated progress via RAF ---
+  // --- Core: create objectURL + fake animated progress with RAF ---
   handleFiles(files: FileList, type: 'image' | 'video') {
     Array.from(files).forEach(file => {
       const id = ++this.idCounter;
@@ -71,23 +99,14 @@ export class FileUpload implements OnDestroy {
       if (type === 'image') this.images.push(placeholder);
       else this.videos.push(placeholder);
 
-      // Duration kecil untuk file kecil, lebih lama untuk file lebih besar (kasual)
       const duration = Math.min(1400, 300 + file.size / 1000); // ms
       const start = performance.now();
 
       const step = (now: number) => {
-        console.log("---------------------")
-        console.log("PROGRESS start", start)
-        console.log("PROGRESS now", now)
-        console.log("PROGRESS DUR", duration)
-        console.log("PROGRESS", placeholder.progress)
         const elapsed = now - start;
-        console.log("elapsed", elapsed)
         let percent = Math.round((elapsed / duration) * 100);
         percent = Math.max(0, Math.min(100, percent));
-        console.log("PERCENT", percent)
 
-        // pastikan Angular tahu perubahan (zone.run)
         this.zone.run(() => {
           placeholder.progress = percent;
           if (type === 'image') {
@@ -101,7 +120,6 @@ export class FileUpload implements OnDestroy {
           const handle = requestAnimationFrame(step);
           this.rafHandles.set(placeholder.id, handle);
         } else {
-          // reached 100% animasi; kita tetap menunggu event load() media untuk hide overlay.
           this.rafHandles.delete(placeholder.id);
         }
       };
@@ -111,12 +129,11 @@ export class FileUpload implements OnDestroy {
     });
   }
 
-  // dipanggil oleh (load) pada <img> atau (loadeddata) pada <video>
+  // Called when image/video preview is loaded
   onPreviewLoaded(id: number) {
     const item = this.findById(id);
     if (!item) return;
 
-    // cancel RAF kalau masih ada
     const raf = this.rafHandles.get(id);
     if (raf) {
       cancelAnimationFrame(raf);
@@ -129,7 +146,7 @@ export class FileUpload implements OnDestroy {
     });
   }
 
-  // remove preview (optional utility)
+  // Remove single preview
   removePreview(id: number, event: Event) {
     event.stopPropagation();
     const idxImg = this.images.findIndex(i => i.id === id);
@@ -139,6 +156,7 @@ export class FileUpload implements OnDestroy {
       const raf = this.rafHandles.get(id);
       if (raf) cancelAnimationFrame(raf);
       this.rafHandles.delete(id);
+      this.clearFileInput('image');
       return;
     }
 
@@ -149,6 +167,7 @@ export class FileUpload implements OnDestroy {
       const raf = this.rafHandles.get(id);
       if (raf) cancelAnimationFrame(raf);
       this.rafHandles.delete(id);
+      this.clearFileInput('video');
     }
   }
 
@@ -160,7 +179,6 @@ export class FileUpload implements OnDestroy {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  // helper
   private findById(id: number) {
     return this.images.find(i => i.id === id) || this.videos.find(v => v.id === id) || null;
   }
@@ -169,7 +187,7 @@ export class FileUpload implements OnDestroy {
     return item.id;
   }
 
-  // revoke any remaining object URLs on destroy
+  // Clean up object URLs and RAF on destroy
   ngOnDestroy(): void {
     this.images.concat(this.videos).forEach(it => {
       if (it.objectUrl) URL.revokeObjectURL(it.objectUrl);
@@ -178,13 +196,12 @@ export class FileUpload implements OnDestroy {
     });
     this.rafHandles.clear();
   }
-  
-  // Simpan semua file ke localStorage
+
+  // Save all files to localStorage
   uploadAll(type: 'image' | 'video') {
     const items = type === 'image' ? this.images : this.videos;
     if (items.length === 0) return;
 
-    // Simpan data ke localStorage
     const data = items.map(f => ({
       id: f.id,
       name: f.fileName,
@@ -193,21 +210,49 @@ export class FileUpload implements OnDestroy {
     }));
 
     localStorage.setItem(this.storageKey(type), JSON.stringify(data));
+
+    // Clear previews after upload
+    if (type === 'image') {
+      this.images.forEach(it => {
+        if (it.objectUrl) URL.revokeObjectURL(it.objectUrl);
+      });
+      this.images = [];
+      this.clearFileInput('image');
+    } else {
+      this.videos.forEach(it => {
+        if (it.objectUrl) URL.revokeObjectURL(it.objectUrl);
+      });
+      this.videos = [];
+      this.clearFileInput('video');
+    }
+
     alert(`${type === 'image' ? 'Images' : 'Videos'} uploaded to localStorage!`);
   }
 
-  // Hapus semua preview
+  // Remove all previews
   removeAll(type: 'image' | 'video') {
     if (type === 'image') {
       this.images.forEach(it => {
         if (it.objectUrl) URL.revokeObjectURL(it.objectUrl);
       });
       this.images = [];
+      this.clearFileInput('image');
     } else {
       this.videos.forEach(it => {
         if (it.objectUrl) URL.revokeObjectURL(it.objectUrl);
       });
       this.videos = [];
+      this.clearFileInput('video');
+    }
+  }
+
+  // Reset <input type="file">
+  clearFileInput(type: 'image' | 'video') {
+    if (type === 'image' && this.fileInputImage) {
+      this.fileInputImage.nativeElement.value = '';
+    }
+    if (type === 'video' && this.fileInputVideo) {
+      this.fileInputVideo.nativeElement.value = '';
     }
   }
 }
